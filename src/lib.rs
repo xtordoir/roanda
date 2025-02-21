@@ -118,9 +118,7 @@ impl Client {
 
         
         if let Some(res) = response.ok() {
-            let parsed: Result<T, reqwest::Error> = res.json().await;//.ok();
-            println!("{:?}", parsed);
-
+            return res.json().await.ok();
         }
         
         None
