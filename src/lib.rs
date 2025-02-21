@@ -115,8 +115,7 @@ impl Client {
         .bearer_auth(self.token.clone())
         .send()
         .await;
-
-        
+       
         if let Some(res) = response.ok() {
             return res.json().await.ok();
         }
