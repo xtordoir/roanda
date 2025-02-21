@@ -46,10 +46,10 @@ pub struct Price {
     pub closeout_ask: String,
     pub closeout_bid: String,
     pub instrument: String,
-    pub quote_home_conversion_factors: QuoteHomeConversionFactors,
+    pub quote_home_conversion_factors: Option<QuoteHomeConversionFactors>,
     pub status: String,
     pub time: String,
-    //pub units_available: UnitsAvailable,
+    pub units_available: Option<UnitsAvailable>,
 }
 
 impl Pricing {
