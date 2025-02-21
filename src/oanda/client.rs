@@ -1,3 +1,5 @@
+use super::*;
+
 pub struct Client {
     token: String,
     url: String,
