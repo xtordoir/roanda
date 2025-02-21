@@ -1,8 +1,36 @@
 use std::fmt::Debug;
-
+use chrono::DateTime;
 use serde::Deserialize;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+
+#[derive(Debug)]
+pub struct Tick {
+    pub time: i64,
+    pub bid: f64,
+    pub ask: f64,
+}
+
+impl Tick {
+
+    pub fn time(&self) -> i64 {
+        self.time / 1000
+    }
+    pub fn price(&self) -> f64 {
+        (self.bid+self.ask)/2.0
+    }
+
+    pub fn buy_price(&self) -> f64 {
+        self.ask
+    }
+    pub fn sell_price(&self) -> f64 {
+        self.bid
+    }
+
+    pub fn spread(&self) -> f64 {
+        self.bid - self.ask
+    }
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,6 +50,16 @@ pub struct Price {
     pub status: String,
     pub time: String,
     //pub units_available: UnitsAvailable,
+}
+
+impl Pricing {
+    pub fn get_tick(&self) -> Tick {
+        Tick{
+            time:  DateTime::parse_from_rfc3339(self.prices.first().map(|p| p.time.clone()).unwrap().as_str()).unwrap().timestamp(),
+            bid: (self.prices.first().map(|p| p.bids.first().map(|l| l.price.clone()).unwrap()).unwrap()).parse::<f64>().unwrap(),
+            ask: (self.prices.first().map(|p| p.asks.first().map(|l| l.price.clone()).unwrap()).unwrap()).parse::<f64>().unwrap(),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
