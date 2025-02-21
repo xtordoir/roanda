@@ -1,0 +1,18 @@
+pub struct Client {
+    token: String,
+    url: String,
+    account: String,
+    client: reqwest::Client,
+}
+
+impl Client {
+    pub fn new(url: String, account: String, token: String) -> Client {
+        let ret = Client {
+            token: token,
+            account: account,
+            url: url,
+            client: reqwest::Client::new(),
+        };
+        ret
+    }
+}
