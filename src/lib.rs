@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use serde::Deserialize;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -107,19 +109,20 @@ impl Client {
      * private method to GET a resource and parse response as T
      */
     async fn get<T>(&self, request_url: String) -> Option<T> where
-    T: DeserializeOwned, {
+    T: DeserializeOwned + Debug {
         let response = self.client
         .get(request_url)
         .bearer_auth(self.token.clone())
         .send()
         .await;
 
-        println!("{:?}", response);
+        
+        if let Some(res) = response.ok() {
+            let parsed: Result<T, reqwest::Error> = res.json().await;//.ok();
+            println!("{:?}", parsed);
 
-/*        if let Some(res) = response.ok() {
-            return res.json().await.ok();
         }
-        */
+        
         None
     }
 
