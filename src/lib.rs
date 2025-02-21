@@ -21,7 +21,7 @@ pub struct Price {
     pub quote_home_conversion_factors: QuoteHomeConversionFactors,
     pub status: String,
     pub time: String,
-    pub units_available: UnitsAvailable,
+    //pub units_available: UnitsAvailable,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
