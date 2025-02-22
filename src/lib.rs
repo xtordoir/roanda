@@ -1,8 +1,41 @@
 use std::fmt::Debug;
 use chrono::DateTime;
+
+use std::collections::HashMap;
+
 use serde::Deserialize;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+
+// Instruments related definitions
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Instruments {
+    pub instruments: Vec<Instrument>,
+    #[serde(rename = "lastTransactionID")]
+    pub last_transaction_id: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Instrument {
+    pub display_name: String,
+    pub display_precision: i64,
+    pub margin_rate: String,
+    pub maximum_order_units: String,
+    pub maximum_position_size: String,
+    pub maximum_trailing_stop_distance: String,
+    pub minimum_trade_size: String,
+    pub minimum_trailing_stop_distance: String,
+    pub name: String,
+    pub pip_location: i64,
+    pub trade_units_precision: i64,
+    #[serde(rename = "type")]
+    pub type_field: String,
+}
+
+// Utility Tick struct ( not part of oanda API definitions )
 
 #[derive(Debug)]
 pub struct Tick {
@@ -32,6 +65,8 @@ impl Tick {
     }
 }
 
+// Pricing definitions
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Pricing {
@@ -53,6 +88,9 @@ pub struct Price {
 }
 
 impl Pricing {
+    /**
+     * convert a Pricing response into a Tick
+     */
     pub fn get_tick(&self) -> Tick {
         Tick{
             time:  DateTime::parse_from_rfc3339(self.prices.first().map(|p| p.time.clone()).unwrap().as_str()).unwrap().timestamp(),
@@ -125,6 +163,7 @@ pub struct Client {
     url: String,
     account: String,
     client: reqwest::Client,
+    instruments: HashMap<String, Instrument>,
 }
 
 impl Client {
@@ -134,8 +173,24 @@ impl Client {
             account: account,
             url: url,
             client: reqwest::Client::new(),
+            instruments: HashMap::new(),
         };
         ret
+    }
+
+    /**
+     * calling get_instruments retuns the Instruments and set them in the client 
+     */
+    pub async fn get_instruments(&mut self) -> Option<Instruments> {
+        let request_url = format!("{}/v3/accounts/{}/instruments",self.url.clone(), self.account);
+        let instruments_opt = self.get::<Instruments>(request_url).await;
+        instruments_opt.iter().for_each(|i| {
+            i.instruments.iter().for_each(|instrument| {
+                let i_clone = instrument.clone();
+                self.instruments.insert(i_clone.name.clone(), i_clone);
+            });
+        });
+        return instruments_opt;
     }
 
     pub async fn get_pricing(&self, instrument: String) -> Option<Pricing> {
