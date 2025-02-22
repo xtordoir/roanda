@@ -163,7 +163,7 @@ pub struct Client {
     url: String,
     account: String,
     client: reqwest::Client,
-    instruments: HashMap<String, Instrument>,
+    pub instruments: HashMap<String, Instrument>,
 }
 
 impl Client {
