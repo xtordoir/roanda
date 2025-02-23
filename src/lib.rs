@@ -7,6 +7,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+//use serde_json::json;
+
 // Instruments related definitions
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -218,6 +220,108 @@ pub struct Short {
     pub trade_ids: Vec<String>,
 }
 
+// Order definitions
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderRequest {
+    pub order: Order,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Order {
+    pub units: String,
+    pub instrument: String,
+    pub time_in_force: String,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub position_fill: String,
+}
+
+
+impl OrderRequest {
+    pub fn new_market(units: String, instrument: String) -> Self {
+        Self {
+            order: Order {
+                units: units,
+                instrument: instrument,
+                time_in_force: "FOK".to_owned(),
+                type_field: "MARKET".to_owned(),
+                position_fill: "DEFAULT".to_owned(),
+            }
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        return serde_json::ser::to_string(self).ok().unwrap();
+    }
+}
+
+
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostOrderResponse {
+    #[serde(rename = "lastTransactionID")]
+    pub last_transaction_id: String,
+    pub order_create_transaction: OrderCreateTransaction,
+    pub order_fill_transaction: OrderFillTransaction,
+    #[serde(rename = "relatedTransactionIDs")]
+    pub related_transaction_ids: Vec<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderCreateTransaction {
+    #[serde(rename = "accountID")]
+    pub account_id: String,
+    #[serde(rename = "batchID")]
+    pub batch_id: String,
+    pub id: String,
+    pub instrument: String,
+    pub position_fill: String,
+    pub reason: String,
+    pub time: String,
+    pub time_in_force: String,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub units: String,
+    #[serde(rename = "userID")]
+    pub user_id: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderFillTransaction {
+    pub account_balance: String,
+    #[serde(rename = "accountID")]
+    pub account_id: String,
+    #[serde(rename = "batchID")]
+    pub batch_id: String,
+    pub financing: String,
+    pub id: String,
+    pub instrument: String,
+    #[serde(rename = "orderID")]
+    pub order_id: String,
+    pub pl: String,
+    pub price: String,
+    pub reason: String,
+    pub time: String,
+    pub trade_opened: TradeOpened,
+    #[serde(rename = "type")]
+    pub type_field: String,
+    pub units: String,
+    #[serde(rename = "userID")]
+    pub user_id: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TradeOpened {
+    #[serde(rename = "tradeID")]
+    pub trade_id: String,
+    pub units: String,
+}
 
 pub struct Client {
     token: String,
@@ -282,6 +386,13 @@ impl Client {
         return self.get::<Positions>(request_url).await;
     }
 
+
+    pub async fn post_order_request(&self, order: OrderRequest) -> Option<PostOrderResponse> {
+        let request_url = format!("{}/v3/accounts/{}/orders",self.url.clone(), self.account);
+        return self.post::<OrderRequest, PostOrderResponse>(request_url, order).await;
+    }
+
+
     /**
      * private method to GET a resource and parse response as T
      */
@@ -297,6 +408,24 @@ impl Client {
             return res.json().await.ok();
         }
         
+        None
+    }
+
+        /**
+     * private method to GET a resource and parse response as T
+     */
+    async fn post<R, T>(&self, request_url: String, request: R) -> Option<T> where
+    T: DeserializeOwned + Debug, R: Serialize {
+        let response: Result<reqwest::Response, reqwest::Error> = self.client
+            .post(request_url)
+            .bearer_auth(self.token.clone())
+            .json(&request)
+            .send()
+            .await;
+
+        if let Some(res) = response.ok() {
+            return res.json().await.ok();
+        }
         None
     }
 
