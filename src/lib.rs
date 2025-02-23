@@ -193,6 +193,19 @@ impl Client {
         return instruments_opt;
     }
 
+    pub async fn get_instruments_from(&mut self, instruments: Vec<String>) -> Option<Instruments> {
+        let query = instruments.join(",");
+        let request_url = format!("{}/v3/accounts/{}/instruments?{}",self.url.clone(), self.account, query);
+        let instruments_opt = self.get::<Instruments>(request_url).await;
+        instruments_opt.iter().for_each(|i| {
+            i.instruments.iter().for_each(|instrument| {
+                let i_clone = instrument.clone();
+                self.instruments.insert(i_clone.name.clone(), i_clone);
+            });
+        });
+        return instruments_opt;
+    }
+
     pub async fn get_pricing(&self, instrument: String) -> Option<Pricing> {
         let request_url = format!("{}/v3/accounts/{}/pricing?instruments={}",self.url.clone(), self.account, instrument);
         return self.get::<Pricing>(request_url).await;
