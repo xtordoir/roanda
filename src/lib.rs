@@ -158,6 +158,67 @@ pub struct ReduceOnly {
     pub short: String,
 }
 
+// Positions Definitions
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnePosition {
+    #[serde(rename = "lastTransactionID")]
+    pub last_transaction_id: String,
+    pub position: Position,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Positions {
+    #[serde(rename = "lastTransactionID")]
+    pub last_transaction_id: String,
+    pub positions: Vec<Position>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Position {
+    pub instrument: String,
+    pub long: Long,
+    pub pl: String,
+    #[serde(rename = "resettablePL")]
+    pub resettable_pl: String,
+    pub short: Short,
+    #[serde(rename = "unrealizedPL")]
+    pub unrealized_pl: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Long {
+    pub average_price: Option<String>,
+    pub pl: String,
+    #[serde(rename = "resettablePL")]
+    pub resettable_pl: String,
+    #[serde(rename = "tradeIDs")]
+    pub trade_ids: Option<Vec<String>>,
+    pub units: String,
+    #[serde(rename = "unrealizedPL")]
+    pub unrealized_pl: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Short {
+    pub pl: String,
+    #[serde(rename = "resettablePL")]
+    pub resettable_pl: String,
+    pub units: String,
+    #[serde(rename = "unrealizedPL")]
+    pub unrealized_pl: String,
+    pub average_price: Option<String>,
+    #[serde(rename = "tradeIDs")]
+    #[serde(default)]
+    pub trade_ids: Vec<String>,
+}
+
+
 pub struct Client {
     token: String,
     url: String,
@@ -209,6 +270,16 @@ impl Client {
     pub async fn get_pricing(&self, instrument: String) -> Option<Pricing> {
         let request_url = format!("{}/v3/accounts/{}/pricing?instruments={}",self.url.clone(), self.account, instrument);
         return self.get::<Pricing>(request_url).await;
+    }
+
+    pub async fn get_position(&self, instrument: String) -> Option<OnePosition> {
+        let request_url = format!("{}/v3/accounts/{}/positions/{}",self.url.clone(), self.account, instrument);
+        return self.get::<OnePosition>(request_url).await;
+    }
+
+    pub async fn get_open_positions(&self) -> Option<Positions> {
+        let request_url = format!("{}/v3/accounts/{}/openPositions",self.url.clone(), self.account);
+        return self.get::<Positions>(request_url).await;
     }
 
     /**

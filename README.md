@@ -13,15 +13,19 @@ Partial implementation of the Oanda API in rust
 
 - get_pricing(&self, instrument: String)
 
-## Also required to run trading strategies with market orders
+### Positions
 
 - get_position(&self, instrument: String)
+- get_open_positions(&self)
+
+
+## Also required to run trading strategies with market orders
+
 - post_order(&self, order: &OrderRequest)
 
 ## Required to run multiple instruments strategies concurrently
 
 - get_pricing(&self, instruments: Vec<String>)
-- get_open_positions(&self)
 
 ## Required for strategies using Limit Orders
 
