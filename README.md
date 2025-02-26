@@ -19,7 +19,7 @@ Partial implementation of the Oanda API in rust
 - get_open_positions(&self)
 
 
-## Also required to run trading strategies with market orders
+### Mrket orders
 
 - post_order(&self, order: &OrderRequest)
 

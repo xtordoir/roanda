@@ -100,6 +100,9 @@ impl Pricing {
             ask: (self.prices.first().map(|p| p.asks.first().map(|l| l.price.clone()).unwrap()).unwrap()).parse::<f64>().unwrap(),
         }
     }
+    pub fn is_tradeable(&self) -> bool {
+        self.prices.first().map(|p| p.status.clone()).unwrap() == "tradeable"
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -170,6 +173,16 @@ pub struct OnePosition {
     pub position: Position,
 }
 
+impl OnePosition {
+    pub fn new(instrument: String) -> Self {
+        Self{
+            last_transaction_id: "".to_string(),
+            position: Position::empty(instrument),
+        }
+
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Positions {
@@ -190,6 +203,18 @@ pub struct Position {
     #[serde(rename = "unrealizedPL")]
     pub unrealized_pl: String,
 }
+impl Position {
+    pub fn empty(instrument: String) -> Self {
+        Self{
+            instrument: instrument,
+            long: Long::empty(),
+            short: Short::empty(),
+            pl: "0".to_string(),
+            resettable_pl: "0".to_string(),
+            unrealized_pl: "0".to_string(),
+        }
+    }
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -204,20 +229,43 @@ pub struct Long {
     #[serde(rename = "unrealizedPL")]
     pub unrealized_pl: String,
 }
+impl Long {
+    pub fn empty() -> Self {
+        Self { 
+            average_price: None, 
+            pl: "0".to_string(),
+            resettable_pl: "0".to_string(), 
+            trade_ids: None, 
+            units: "0".to_string(), 
+            unrealized_pl: "0".to_string() 
+        }
+    }
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Short {
+    pub average_price: Option<String>,
     pub pl: String,
     #[serde(rename = "resettablePL")]
     pub resettable_pl: String,
+    #[serde(rename = "tradeIDs")]
+    pub trade_ids: Option<Vec<String>>,
     pub units: String,
     #[serde(rename = "unrealizedPL")]
     pub unrealized_pl: String,
-    pub average_price: Option<String>,
-    #[serde(rename = "tradeIDs")]
-    #[serde(default)]
-    pub trade_ids: Vec<String>,
+}
+impl Short {
+    pub fn empty() -> Self {
+        Self { 
+            average_price: None, 
+            pl: "0".to_string(),
+             resettable_pl: "0".to_string(), 
+            trade_ids: None, 
+            units: "0".to_string(), 
+            unrealized_pl: "0".to_string() 
+        }
+    }
 }
 
 // Order definitions
@@ -225,6 +273,19 @@ pub struct Short {
 #[serde(rename_all = "camelCase")]
 pub struct OrderRequest {
     pub order: Order,
+}
+impl OrderRequest {
+    pub fn market(units: String, instrument: String) -> Self {
+        Self {
+            order: Order {
+                units: units,
+                instrument: instrument,
+                time_in_force: "FOK".to_owned(),
+                type_field: "MARKET".to_owned(),
+                position_fill: "DEFAULT".to_owned(),
+            }
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -237,6 +298,8 @@ pub struct Order {
     pub type_field: String,
     pub position_fill: String,
 }
+
+
 
 
 impl OrderRequest {
@@ -264,10 +327,10 @@ impl OrderRequest {
 pub struct PostOrderResponse {
     #[serde(rename = "lastTransactionID")]
     pub last_transaction_id: String,
-    pub order_create_transaction: OrderCreateTransaction,
-    pub order_fill_transaction: OrderFillTransaction,
+    pub order_create_transaction: Option<OrderCreateTransaction>,
+    pub order_fill_transaction: Option<OrderFillTransaction>,
     #[serde(rename = "relatedTransactionIDs")]
-    pub related_transaction_ids: Vec<String>,
+    pub related_transaction_ids: Option<Vec<String>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -287,7 +350,7 @@ pub struct OrderCreateTransaction {
     pub type_field: String,
     pub units: String,
     #[serde(rename = "userID")]
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -307,12 +370,12 @@ pub struct OrderFillTransaction {
     pub price: String,
     pub reason: String,
     pub time: String,
-    pub trade_opened: TradeOpened,
+    pub trade_opened: Option<TradeOpened>,
     #[serde(rename = "type")]
     pub type_field: String,
     pub units: String,
     #[serde(rename = "userID")]
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -412,7 +475,7 @@ impl Client {
     }
 
         /**
-     * private method to GET a resource and parse response as T
+     * private method to POST on a resource and parse response as T
      */
     async fn post<R, T>(&self, request_url: String, request: R) -> Option<T> where
     T: DeserializeOwned + Debug, R: Serialize {
@@ -424,7 +487,16 @@ impl Client {
             .await;
 
         if let Some(res) = response.ok() {
-            return res.json().await.ok();
+            //let xxx = res.bytes().await.ok().unwrap();
+            let result = res.json::<T>().await;
+            if result.is_err() {
+                println!("{:#?}", result.err().unwrap());
+                return None;
+            }
+            //println!("{:#?}", xxx);
+            return result.ok();
+        } else {
+            eprint!("http error..");
         }
         None
     }
